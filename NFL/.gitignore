@@ -1,0 +1,6 @@
+#ignore all csv files
+*.csv
+
+#IPython
+ipython_config.py
+.ipynb_checkpoints
