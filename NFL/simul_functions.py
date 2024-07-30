@@ -2,21 +2,46 @@ import pandas as pd
 import numpy as np
 
 
+def mk_simulator:
+    prob_bt_player=0.20
+    n_sim=10000
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    simulation_seq=[]
+    gain_seq=[]
+    for rand_sim in np.random.uniform(0,1,n_sim):
+        prob_bt=prob_bt_player
+        total_gain=[]
+        bk_tackle_in_each_itr=[]
+        for n in range(len(seq1)):
+            
+            bk_tackle_in_each_itr.append(prob_bt)
+            
+            player=seq1[n][0]
+            prob_mt=seq1[n][1]
+            gain=seq1[n][2]
+            
+            break_tackle=prob_bt*(1-prob_mt)
+            expectation= 1-break_tackle
+            
+            #prob_bt=break_tackle # at the end of this nth loop the probability of breaking the tackle for the player will be updated 
+                                 # from the cumulative break events from prev loops
+            
+        
+            total_gain.append(gain)
+            gain_seq.append(gain)
+            if len(bk_tackle_in_each_itr)>=3:
+                print(rand_sim,break_tackle,expectation,n,gain,bk_tackle_in_each_itr)
+            if rand_sim> prob_bt: #prob(a and b )=prob(a)*prob(b)
+                break   
+            
+            prob_bt=break_tackle # at the end of this nth loop the probability of breaking the tackle for the player will be updated 
+                                 # from the cumulative break events from prev loops
+            
+        max_gain=max(total_gain)
+        simulation_seq.append(max_gain)
+        #print(rand_sim,max_gain)
+    return simulation_seq
+    
 
 
 # Function to calculate velocities based on current positions and target position
