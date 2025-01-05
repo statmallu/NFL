@@ -1,4 +1,5 @@
 from tensorflow.keras.models import Model
+import tensorflow.keras.backend as K
 from tensorflow.keras.layers import Input, LSTM, Dense, Concatenate, Reshape, Dropout
 from sklearn.metrics import roc_curve, auc, mean_squared_error
 import matplotlib.pyplot as plt
@@ -57,32 +58,33 @@ def build_mc_dropout_lstm(input_past_shape, input_future_shape, forecast_steps, 
     # Branch 1: For X_train_past
     past_input = Input(shape=input_past_shape, name="past_input")
     x1 = LSTM(64, return_sequences=False)(past_input)
-    x1 = Dropout(0.2)(x1)
+    x1 = Dropout(0.4)(x1)
 
     # Branch 2: For X_train_weather_future
     future_input = Input(shape=input_future_shape, name="future_input")
     x2 = LSTM(32, return_sequences=False)(future_input)
-    x2 = Dropout(0.2)(x2)
+    x2 = Dropout(0.4)(x2)
 
     # Combine the two branches
     combined = Concatenate()([x1, x2])
 
     # Fully connected layers
     x = Dense(128, activation="relu")(combined)
-    x = Dropout(0.2)(x)  # MC Dropout layer
+    x = Dropout(0.4)(x)  # MC Dropout layer
     x = Dense(forecast_steps * num_targets, activation="linear")(x)
 
     # Reshape to match output shape: (batch_size, forecast_steps, num_targets)
-    output = Dense(forecast_steps * num_targets, activation="linear")(x)
+    output = Reshape((forecast_steps, num_targets))(x)
 
     # Define the model
     model = Model(inputs=[past_input, future_input], outputs=output)
     model.compile(optimizer="adam", loss="mse")
     return model
 
+
 def batch_predict(model, X_past, X_future, batch_size, num_passes):
     """
-    Perform stochastic forward passes in batches to reduce memory usage.
+    Perform stochastic forward passes with MC Dropout in batches.
 
     Parameters:
         model: Trained model with MC Dropout enabled.
@@ -95,17 +97,27 @@ def batch_predict(model, X_past, X_future, batch_size, num_passes):
         all_predictions (numpy array): Predictions of shape 
                                         (num_passes, num_samples, forecast_steps, num_targets).
     """
+
+    # Define a function to perform stochastic predictions with dropout active
+    f_model = K.function(model.inputs, [model.output])
+    
     num_samples = X_past.shape[0]
     all_predictions = []
 
-    for _ in range(num_passes):
+    for pass_idx in range(num_passes):
+        print(f"Pass {pass_idx + 1}/{num_passes}")
         predictions = []
+        
         for start_idx in range(0, num_samples, batch_size):
             end_idx = min(start_idx + batch_size, num_samples)
             batch_past = X_past[start_idx:end_idx]
             batch_future = X_future[start_idx:end_idx]
-            pred = model.predict([batch_past, batch_future], verbose=0)
+            
+            # Stochastic prediction for the current batch
+            pred = f_model([batch_past, batch_future])[0]
             predictions.append(pred)
+        
+        # Collect predictions for the current pass
         all_predictions.append(np.concatenate(predictions, axis=0))
 
     return np.array(all_predictions)
